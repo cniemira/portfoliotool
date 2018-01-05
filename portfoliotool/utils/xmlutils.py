@@ -2,11 +2,11 @@ import xml.etree.ElementTree
 from xml.dom import minidom
 
 
-def key(string):
-    return str(string).lower().replace(' ', '_')
+# def key(string):
+#     return str(string).lower().replace(' ', '_')
 
 
-def get_attribute(node, attr, cast=key):
+def get_attribute(node, attr, cast=str):
     return cast(node.attributes[attr].value)
 
 

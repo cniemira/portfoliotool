@@ -1,5 +1,7 @@
 import logging
 
+from collections import OrderedDict, defaultdict
+
 from portfoliotool.utils.xmlutils import (
     get_attribute, get_attributes, get_subnode, get_subnode_subnodes,
     get_textnode
@@ -38,17 +40,23 @@ class HeroLabPathfinderCharacter(object):
         self.max_hp = get_attribute(health, 'hitpoints', int)
 
         attrs = get_subnode_subnodes(root, 'attributes', 'attribute')
+        self.attribute_bonuses = {}
+        self.attributes = {}
         for attrnode in attrs:
             name = get_attribute(attrnode, 'name')
+            attrbonus = get_subnode(attrnode, 'attrbonus')
+            bonus = get_attribute(attrbonus, 'modified', int)
+            self.attribute_bonuses.update({name: bonus})
             attrvalue = get_subnode(attrnode, 'attrvalue')
             value = get_attribute(attrvalue, 'modified', int)
-            setattr(self, name, value)
+            self.attributes.update({name: value})
 
         saves = get_subnode_subnodes(root, 'saves', 'save')
+        self.saves = {}
         for savenode in saves:
             name = get_attribute(savenode, 'name')
             value = get_attribute(savenode, 'save', int)
-            setattr(self, name, value)
+            self.saves.update({name: value})
 
         armorclass = get_subnode(root, 'armorclass')
         self.ac = '%d %dT %dF' % (
@@ -68,11 +76,11 @@ class HeroLabPathfinderCharacter(object):
         self.movement = get_attribute(move, 'value', int)
 
         skills = get_subnode_subnodes(root, 'skills', 'skill')
+        self.skills = {}
         for skillnode in skills:
-            setattr(self,
-                    get_attribute(skillnode, 'name'),
-                    get_attribute(skillnode, 'value', int)
-                    )
+            name = get_attribute(skillnode, 'name')
+            value = get_attribute(skillnode, 'value', int)
+            self.skills.update({name: value})
 
         def _parse_1(nodes, name_attr='name'):
             d = {}
@@ -91,7 +99,7 @@ class HeroLabPathfinderCharacter(object):
             d = {}
             for node in nodes:
                 obj = get_attributes(node)
-                name = obj.pop('name')
+                name = obj['name']
                 try:
                     description = get_textnode(node, 'description')
                     obj.update({'description': description})
@@ -125,15 +133,27 @@ class HeroLabPathfinderCharacter(object):
                                              'special')
         self.otherspecials = _parse_1(otherspecials, name_attr='shortname')
 
+        def _spells_by_level(spell_dict):
+            d = {}
+            for name, spell in spell_dict.items():
+                level = spell['level']
+                if level not in d:
+                    d[level] = {}
+                d[level].update({name: spell})
+            return d
+
         spellsknown = get_subnode_subnodes(root,
                                            'spellsknown',
                                            'spell')
         self.spellsknown = _parse_2(spellsknown)
+        self.spellsknown_by_level = _spells_by_level(self.spellsknown)
 
         spellsmemorized = get_subnode_subnodes(root,
                                                'spellsmemorized',
                                                'spell')
         self.spellsmemorized = _parse_2(spellsmemorized)
+        self.spellsmemorized_by_level = _spells_by_level(self.spellsmemorized)
+
 
         log.debug(self)
 

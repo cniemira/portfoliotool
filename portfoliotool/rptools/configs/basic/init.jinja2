@@ -1,0 +1,9 @@
+[h: added = addToInitiative()]
+[if(added == 1), CODE:
+{
+    Initiative! [t: result = 1d20+{{ obj.initiative|int() }}]
+    [h: setInitiative(result)]
+    [h: sortInitiative()]   
+};{
+    [s: "Already rolled initiative!"]
+};]

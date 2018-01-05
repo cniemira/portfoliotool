@@ -4,7 +4,6 @@ import uuid
 from xml.etree.ElementTree import Element, SubElement
 
 from portfoliotool.utils.xmlutils import XMLDocument
-from portfoliotool.rptools.models.data import basic_properties
 
 
 log = logging.getLogger(__name__)
@@ -15,40 +14,52 @@ def guid():
 
 
 class RPToolsMacro(object):
-    def __init__(self, c, label='', command=''):
+    def __init__(self, c,
+                 colorKey='default',
+                 hotKey='None',
+                 command=None,
+                 label=None,
+                 group='',
+                 sortby=None,
+                 autoExecute='true',
+                 includeLabel='false',
+                 applyToTokens='false',
+                 fontColorKey='black',
+                 fontSize='1.00em',
+                 minWidth=None,
+                 maxWidth=None,
+                 allowPlayerEdits='true',
+                 toolTip=None,
+                 commonMacro='false',
+                 compareGroup='true',
+                 compareSortPrefix='true',
+                 compareCommand='true',
+                 compareIncludeLabel='true',
+                 compareAutoExecute='true',
+                 compareApplyToSelectedTokens='true'):
+        assert command is not None
+        assert label is not None
+
         self.root = Element('entry')
         SubElement(self.root, 'int').text = str(c)
         button = SubElement(self.root,
                             'net.rptools.maptool.model.MacroButtonProperties')
         SubElement(button, 'macroUUID').text = str(uuid.uuid4())
         SubElement(button, 'saveLocation').text = 'Token'
-        SubElement(button, 'index').text = '1'
-        SubElement(button, 'colorKey').text = 'default'
-        SubElement(button, 'hotKey').text = 'None'
-        SubElement(button, 'command').text = command
-        SubElement(button, 'label').text = label
-        SubElement(button, 'group').text = 'my_group'
-        SubElement(button, 'sortby')
-        SubElement(button, 'autoExecute').text = 'true'
-        SubElement(button, 'includeLabel').text = 'false'
-        SubElement(button, 'applyToTokens').text = 'false'
-        SubElement(button, 'fontColorKey').text = 'black'
-        SubElement(button, 'fontSize').text = '1.00em'
-        SubElement(button, 'minWidth')
-        SubElement(button, 'maxWidth')
-        SubElement(button, 'allowPlayerEdits').text = 'true'
-        SubElement(button, 'toolTip')
-        SubElement(button, 'commonMacro').text = 'false'
-        SubElement(button, 'compareGroup').text = 'true'
-        SubElement(button, 'compareSortPrefix').text = 'true'
-        SubElement(button, 'compareCommand').text = 'true'
-        SubElement(button, 'compareIncludeLabel').text = 'true'
-        SubElement(button, 'compareAutoExecute').text = 'true'
-        SubElement(button, 'compareApplyToSelectedTokens').text = 'true'
+        SubElement(button, 'index').text = str(c)
+
+        for k, v in locals().items():
+            if v is None:
+                SubElement(button, k)
+            else:
+                SubElement(button, k).text = str(v)
 
 
 class RPToolsToken(XMLDocument):
     _n_macros = 0
+    _n_speech = 0
+
+    propertyType = 'Basic'
 
     def __init__(self, character, assets):
         self.assets = assets
@@ -62,15 +73,14 @@ class RPToolsToken(XMLDocument):
                               'exposedAreaGUID'), 'baGUID').text = guid()
 
         imageAssetMap = SubElement(self.root, 'imageAssetMap')
-        # for asset in assets:
         entry = SubElement(imageAssetMap, 'entry')
         # this null needs to exist
         SubElement(entry, 'null')
         md5key = SubElement(entry, 'net.rptools.lib.MD5Key')
         md5id = SubElement(md5key, 'id').text = assets[0].id
 
-        SubElement(self.root, 'x').text = '1000'
-        SubElement(self.root, 'y').text = '250'
+        SubElement(self.root, 'x').text = '0'
+        SubElement(self.root, 'y').text = '0'
         SubElement(self.root, 'z').text = '1'
         SubElement(self.root, 'anchorX').text = '0'
         SubElement(self.root, 'anchorY').text = '0'
@@ -110,8 +120,7 @@ class RPToolsToken(XMLDocument):
         SubElement(self.root, 'tokenType').text = character.role.upper()
 
         SubElement(self.root, 'layer').text = 'TOKEN'
-        # TODO - Use custom properties
-        SubElement(self.root, 'propertyType').text = 'Basic'
+        SubElement(self.root, 'propertyType').text = self.propertyType
 
         SubElement(self.root, 'tokenOpacity').text = '1.0'
         SubElement(self.root, 'isFlippedX').text = 'false'
@@ -130,8 +139,8 @@ class RPToolsToken(XMLDocument):
         SubElement(self.root, 'notes').text = character.statblock_text
         SubElement(self.root, 'gmNotes')
         SubElement(self.root, 'gmName').text = character.summary
-        SubElement(self.root, 'state')
 
+        self.state = SubElement(self.root, 'state')
         self.props = SubElement(SubElement(self.root, 'propertyMapCI'),
                                 'store')
         self.macros = SubElement(self.root, 'macroPropertiesMap')
@@ -143,12 +152,14 @@ class RPToolsToken(XMLDocument):
         macro = RPToolsMacro(self._n_macros, **kwargs)
         self.macros.append(macro.root)
 
-    def set_basic_properties(self):
-        for prop in basic_properties:
-            if not hasattr(self.character, prop):
-                continue
-            value = getattr(self.character, prop)
-            self.set_property(prop, value)
+    def add_speech(self, text, id=None):
+        if id is None:
+            self._n_speech += 1
+            id = self._n_speech
+        entry = SubElement(self.speech, 'entry')
+        SubElement(entry, 'string').text = str(id)
+        SubElement(entry, 'string').text = text
+        return id
 
     def set_property(self, key, value):
         # type_ = 'int' if type(value) is int else 'string'
@@ -160,3 +171,15 @@ class RPToolsToken(XMLDocument):
         SubElement(kv, 'key').text = key
         SubElement(kv, 'value', {'class': type_}).text = str(value)
         SubElement(kv, 'outer-class', {'reference': '../../../..'})
+
+    def set_state(self, key, value):
+        type_map = {
+            int: 'big-decimal',
+            float: 'big-decimal',
+            str: 'string'
+            }
+        type_ = type(value)
+        class_ = type_map[type_] if type_ in type_map else 'string'
+        entry = SubElement(self.state, 'entry')
+        SubElement(entry, 'string').text = key
+        SubElement(entry, class_).text = str(value)

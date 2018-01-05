@@ -13,9 +13,11 @@ argp = argparse.ArgumentParser(
     description="PortfolioTool"
     )
 
-log_args = argp.add_mutually_exclusive_group()
+# log_args = argp.add_mutually_exclusive_group()
 argp.add_argument('POR_FILE', action='store',
                   type=argparse.FileType('rb'))
+argp.add_argument('-m', '--macro-conf', action='append',
+                  help='Macro config file')
 
 
 def main():
@@ -23,6 +25,9 @@ def main():
     portfolio = PorReader(args.POR_FILE)
     for character in portfolio.characters:
         token = RptokWriter(character)
+        if args.macro_conf:
+            for macro_conf in args.macro_conf:
+                token.add_macros(macro_conf)
         output_file = os.path.join(
             '/Users/siege/Desktop',
             character.name + '.rptok'

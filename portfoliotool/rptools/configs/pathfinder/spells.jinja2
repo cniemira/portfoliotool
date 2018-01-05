@@ -1,0 +1,13 @@
+[h: index = getMacroButtonIndex()]
+[h: props = getMacroProps(index, "json")]
+[h: color = json.get(props, "color")]
+
+[if(color=="green"), CODE:
+{
+ [h: setMacroProps(index, "color=darkgray")]
+ Casts <i>{{ obj.name }}</i> - {{ obj.description|nl2br }}
+};
+{
+ [h: setMacroProps(index, "color=green")]
+}
+]

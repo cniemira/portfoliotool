@@ -1,0 +1,19 @@
+[h:status = input(
+"hpChange|0|Number of Hit Points",
+"dmgOrHealing|Damage,Healing|Damage or healing?|RADIO|SELECT=0")]
+[h:abort(status)]
+
+[r, if(isPropertyEmpty("HP")): HP = {{ obj.current_hp }}]
+
+[if(dmgOrHealing == 0),CODE:
+{
+    [h:HP = HP - hpChange]
+    [h:bar.Health = HP / {{ obj.max_hp }}]
+    [r:token.name] loses [r:hpChange] hit points.
+};
+{
+    [h:diff = {{ obj.current_hp }} - HP]
+    [h:HP = min(HP+hpChange, {{ obj.current_hp }})]
+    [h:bar.Health = HP / {{ obj.current_hp }}]
+    [r:token.name] is healed and gains  [r:min(diff,hpChange)] hit points. 
+};]
