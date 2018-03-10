@@ -3,6 +3,7 @@ import uuid
 
 from xml.etree.ElementTree import Element, SubElement
 
+from portfoliotool.utils.version import version_gte, version_lte
 from portfoliotool.utils.xmlutils import XMLDocument
 
 
@@ -14,7 +15,7 @@ def guid():
 
 
 class RPToolsMacro(object):
-    def __init__(self, c,
+    def __init__(self, c, version,
                  colorKey='default',
                  hotKey='None',
                  command=None,
@@ -44,11 +45,18 @@ class RPToolsMacro(object):
         SubElement(self.root, 'int').text = str(c)
         button = SubElement(self.root,
                             'net.rptools.maptool.model.MacroButtonProperties')
-        SubElement(button, 'macroUUID').text = str(uuid.uuid4())
+
+        if version_gte(self.version, '1.4'):
+            SubElement(button, 'macroUUID').text = str(uuid.uuid4())
         SubElement(button, 'saveLocation').text = 'Token'
         SubElement(button, 'index').text = str(c)
 
+        skip_list = ['version', 'self', 'skip_list']
+        if version_lte(self.version, '1.4'):
+            skip_list.append('c')
         for k, v in locals().items():
+            if k in skip_list:
+                continue
             if v is None:
                 SubElement(button, k)
             else:
@@ -61,9 +69,10 @@ class RPToolsToken(XMLDocument):
 
     propertyType = 'Basic'
 
-    def __init__(self, character, assets):
+    def __init__(self, character, assets, version):
         self.assets = assets
         self.character = character
+        self.version = version
 
         self.root = Element('net.rptools.maptool.model.Token')
 
@@ -93,8 +102,9 @@ class RPToolsToken(XMLDocument):
         SubElement(self.root, 'width').text = str(width)
         SubElement(self.root, 'height').text = str(height)
 
-        SubElement(self.root, 'isoWidth').text = '0'
-        SubElement(self.root, 'isoHeight').text = '0'
+        if version_gte(self.version, '1.4'):
+            SubElement(self.root, 'isoWidth').text = '0'
+            SubElement(self.root, 'isoHeight').text = '0'
         SubElement(self.root, 'scaleX').text = '1.0'
         SubElement(self.root, 'scaleY').text = '1.0'
 
@@ -109,9 +119,10 @@ class RPToolsToken(XMLDocument):
         SubElement(self.root, 'snapToGrid').text = 'true'
         SubElement(self.root, 'isVisible').text = 'true'
         SubElement(self.root, 'visibleOnlyToOwner').text = 'false'
-        SubElement(self.root, 'vblAlphaSensitivity').text = '-1'
-        SubElement(self.root, 'alwaysVisibleTolerance').text = '2'
-        SubElement(self.root, 'isAlwaysVisible').text = 'false'
+        if version_gte(self.version, '1.4'):
+            SubElement(self.root, 'vblAlphaSensitivity').text = '-1'
+            SubElement(self.root, 'alwaysVisibleTolerance').text = '2'
+            SubElement(self.root, 'isAlwaysVisible').text = 'false'
 
         SubElement(self.root, 'name').text = character.name
         SubElement(self.root, 'ownerType').text = '0'
@@ -122,7 +133,8 @@ class RPToolsToken(XMLDocument):
         SubElement(self.root, 'layer').text = 'TOKEN'
         SubElement(self.root, 'propertyType').text = self.propertyType
 
-        SubElement(self.root, 'tokenOpacity').text = '1.0'
+        if version_gte(self.version, '1.4'):
+            SubElement(self.root, 'tokenOpacity').text = '1.0'
         SubElement(self.root, 'isFlippedX').text = 'false'
         SubElement(self.root, 'isFlippedY').text = 'false'
 
@@ -145,11 +157,12 @@ class RPToolsToken(XMLDocument):
                                 'store')
         self.macros = SubElement(self.root, 'macroPropertiesMap')
         self.speech = SubElement(self.root, 'speechMap')
+        #TODO - NERPS can support this
         # self.herolab = SubElement(self.root, 'heroLabData')
 
     def add_macro(self, **kwargs):
         self._n_macros += 1
-        macro = RPToolsMacro(self._n_macros, **kwargs)
+        macro = RPToolsMacro(self._n_macros, self.version, **kwargs)
         self.macros.append(macro.root)
 
     def add_speech(self, text, id=None):

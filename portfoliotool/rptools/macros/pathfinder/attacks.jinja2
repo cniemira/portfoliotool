@@ -1,0 +1,47 @@
+{% set attacks = obj.attack.split('/') -%}
+<table>
+<tr>
+    <td span="{{ attacks|length }}"><b>{{ key }}</b></td>
+</tr>
+
+{% for attack_bonus in attacks -%}
+<tr>
+<td style="border: 1px solid black; padding: 2px 8px;">
+
+{% set n_dmg_dice, t_dmg_dice, dmg_bonus = obj.damage|parse_dice() -%}
+{% set crit_range, crit_mult = obj.crit|parse_crit() -%}
+
+[h: AttackBonus={{ attack_bonus }}]
+[h: NumDice={{ n_dmg_dice }}]
+[h: DamageDie={{ t_dmg_dice }}]
+[h: DamageBonus={{ dmg_bonus }}]
+[h: CritRange={%- if crit_range > 0 -%}{{ crit_range }}{%- else -%}20{%- endif -%}]
+[h: CritDice={{ crit_mult - 1}}]
+
+[h: AttackRoll=d20]
+[h: ToHit=AttackRoll+AttackBonus]
+[h: DamageRoll=roll(NumDice,DamageDie)]
+[h: Damage=DamageRoll+DamageBonus]
+
+H: [AttackRoll] + [r: AttackBonus] = <b>[r: ToHit]</b> to hit<br>
+D: [DamageRoll] + [r: DamageBonus] = <b>[r: Damage]</b>
+
+[if(AttackRoll>=CritRange), CODE:
+ {
+[h: CritRoll=d20]
+[h: ToConfirm=CritRoll+AttackBonus]
+  <br>
+  <font color=Red>--THREATENED CRITICAL--</font><br>
+C: [CritRoll] + [r: AttackBonus] = <b>[r: ToConfirm]</b> to confirm<br>
+[h: CritDamage=roll(CritDice,DamageDie)]
+[h: TotalDamage=CritDamage+Damage]
+D: [CritDamage] + [r: Damage] = <b>[r: TotalDamage]</b>
+ };
+ {}
+]
+
+</td>
+</tr>
+{%- endfor %}
+
+</table>

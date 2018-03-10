@@ -5,9 +5,9 @@ import zipfile
 
 import jinja2
 
-from portfoliotool.rptools.models import RPToolsAsset
-from portfoliotool.rptools.models import RPToolsProperties
-from portfoliotool.rptools.models import RPToolsToken
+from portfoliotool.rptools.models.rptok import RPToolsAsset
+from portfoliotool.rptools.models.rptok import RPToolsProperties
+from portfoliotool.rptools.models.rptok import RPToolsToken
 from portfoliotool.utils.image import unknown_image
 from portfoliotool.utils.jinja2 import jinja_filters
 from portfoliotool.utils.xmlutils import html_body
@@ -15,24 +15,30 @@ from portfoliotool.utils.xmlutils import html_body
 log = logging.getLogger(__name__)
 
 
-class RptokWriter(object):
+class BaseRptokWriter(object):
     _config_path = None
+    _file_suffix = os.path.extsep + 'rptok'
 
-    def __init__(self, character):
+    rptok_versions = ['1.3.b91', '1.4.4.0']
+
+    def __init__(self, character, version):        
+        if version not in self.rptok_versions:
+            raise UserWarning('Cannot write rptok v{0}'.format(version))
+        self.version = version
         self.character = character
 
         # create the assets
         self.assets = []
         if len(character.images) < 1:
             log.warn('No image found. Added a default.')
-            self.assets.append(RPToolsAsset(unknown_image))
+            self.assets.append(RPToolsAsset(unknown_image, self.version))
 
         else:
             for image in character.images:
-                self.assets.append(RPToolsAsset(image))
+                self.assets.append(RPToolsAsset(image, self.version))
 
         # dump the token contents
-        self.content = RPToolsToken(character, self.assets)
+        self.content = RPToolsToken(character, self.assets, self.version)
 
         self.content.set_property('AC', self.character.ac)
         self.content.set_property('Description',
@@ -49,7 +55,11 @@ class RptokWriter(object):
                 self.content.set_property(attr,
                                           self.character.attributes[attr])
 
-        self.properties = RPToolsProperties(character)
+        self.properties = RPToolsProperties(character, self.version)
+        self._configure()
+
+    def _configure(self):
+        raise UserWarning('Subclass failure!')
 
     def add_macros(self, config_file):
         self._config_path = os.path.dirname(os.path.abspath(config_file))
@@ -95,13 +105,20 @@ class RptokWriter(object):
                         tmpl = env.get_template(cval)
                     rval = tmpl.render(key=key, obj=value)
                     macro_args.update({ckey: rval})
-                log.info(macro_args)
+                log.debug(macro_args)
                 self.content.add_macro(**macro_args)
 
     def save_as(self, path):
+        assert path.endswith(self._file_suffix)
+
         with zipfile.ZipFile(path, 'w') as myzip:
             myzip.writestr('properties.xml', str(self.properties))
             myzip.writestr('content.xml', str(self.content))
             for asset in self.assets:
                 myzip.writestr(asset.xml_file, str(asset))
                 myzip.writestr(asset.img_file, asset.image)
+
+    def save_name(self, path):
+        if not path.endswith(self._file_suffix):
+            path = path + self._file_suffix
+        return path

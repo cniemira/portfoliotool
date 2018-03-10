@@ -2,12 +2,12 @@ import xml.etree.ElementTree
 from xml.dom import minidom
 
 
-# def key(string):
-#     return str(string).lower().replace(' ', '_')
-
-
 def get_attribute(node, attr, cast=str):
-    return cast(node.attributes[attr].value)
+    value = node.attributes[attr].value
+    try:
+        return cast(value)
+    except ValueError:
+        return value
 
 
 def get_attributes(node):
@@ -33,7 +33,9 @@ def get_subnode_subnodes(node, first, second):
 
 def get_textnode(node, name):
     sub = get_subnode(node, name)
-    return str(sub.childNodes[0].data)
+    if len(sub.childNodes):
+        return str(sub.childNodes[0].data)
+    return 'None'
 
 
 def html_body(doc):

@@ -102,7 +102,7 @@ class PorReader(object):
 
             dom = minidom.parseString(doc)
             for character in dom.getElementsByTagName('character'):
-                hlcharacter = self.character_model(character)
+                hlcharacter = self.character_model(character, game_type)
                 data = self._index_data[hlcharacter.characterindex]
                 hlcharacter.summary = data['summary']
                 hlcharacter.statblock_html = self._file_cache[data['html']].decode()

@@ -1,3 +1,4 @@
+import importlib
 import logging
 
 from collections import OrderedDict, defaultdict
@@ -12,8 +13,16 @@ log = logging.getLogger(__name__)
 
 
 class HeroLabPathfinderCharacter(object):
-    def __init__(self, root):
+    _writers = {
+        'rptok': {
+            'ally': ('portfoliotool.rptools.models.pathfinder', 'AllyWriter'),
+            'enemy': ('portfoliotool.rptools.models.pathfinder', 'EnemyWriter'),
+            }
+        }
+
+    def __init__(self, root, game_type):
         assert root.nodeName == 'character'
+        self.game_type = game_type
         self.characterindex = get_attribute(root, 'characterindex', int)
 
         self.images = []
@@ -31,6 +40,8 @@ class HeroLabPathfinderCharacter(object):
         self.name = get_attribute(root, 'name', str)
         self.playername = get_attribute(root, 'playername', str)
         self.role = get_attribute(root, 'role')
+        self.relationship = get_attribute(root, 'relationship')
+        self.character_type = get_attribute(root, 'type')
 
         space = get_subnode(root, 'size', 'space')
         self.size = get_attribute(space, 'value', int)
@@ -154,8 +165,21 @@ class HeroLabPathfinderCharacter(object):
         self.spellsmemorized = _parse_2(spellsmemorized)
         self.spellsmemorized_by_level = _spells_by_level(self.spellsmemorized)
 
-
         log.debug(self)
 
     def __repr__(self):
         return str(self.__dict__)
+
+    def get_writer(self, writer_type, version):
+        if writer_type not in self._writers:
+            raise UserWarning(
+                '{0.game_type} cannot convert to {1}'.format(
+                    self, writer_type))
+        writers = self._writers.get(writer_type, version)
+        if self.relationship not in writers:
+            raise UserWarning(
+                '{0.game_type} {0.relationship} cannot convert to {1}'.format(
+                    self, writer_type))
+        module_name, class_name = writers.get(self.relationship)
+        class_ = getattr(importlib.import_module(module_name), class_name)
+        return class_(self)

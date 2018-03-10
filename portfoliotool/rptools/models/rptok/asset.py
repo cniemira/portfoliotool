@@ -12,7 +12,7 @@ log = logging.getLogger(__name__)
 
 
 class RPToolsAsset(XMLDocument):
-    def __init__(self, image):
+    def __init__(self, image, version):
         self.image = image
 
         self.image_type = imghdr.what(None, h=image)

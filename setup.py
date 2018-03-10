@@ -8,6 +8,7 @@ README = """Portfolio Tool
 """
 
 requires = [
+    'cement',
     ]
 
 setup(name='portfoliotool',
@@ -28,6 +29,6 @@ setup(name='portfoliotool',
       install_requires=requires,
       entry_points="""\
       [console_scripts]
-      portfoliotool = portfoliotool.cli:main
+      portool = portfoliotool.cli:main
       """,
       )
